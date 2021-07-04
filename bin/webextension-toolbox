@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 const program = require('commander')
 const chalk = require('chalk')
+const path = require("path")
+const WebpackDevServer = require("webpack-dev-server")
 const { version } = require('../package.json')
 const { compile } = require('..')
 
@@ -13,7 +15,8 @@ program
   .option('-s, --src [src]', 'specify source directory', 'app')
   .option('-t, --target [target]', 'specify target directory', 'dist/[vendor]')
   .option('-d, --devtool [devtool]', 'controls if and how source maps are generated', 'cheap-source-map')
-  .option('-r, --autoReload [autoReload]', 'reload extension after rebuild', true)
+  .option('-r, --autoReload [autoReload]', 'reload extension after rebuild', false)
+  .option('--dev-server', 'use webpack dev server to serve bundled files (disables auto-reload)', false)
   .option('-v, --vendorVersion [vendorVersion]', 'last supported vendor (default: current)')
   .option('--verbose [verbose]', 'print messages at the beginning and end of incremental build', false)
   .action(function watch (vendor, options) {
@@ -25,7 +28,7 @@ program
       src: options.src,
       minimize: false,
       target: options.target,
-      autoReload: options.autoReload,
+      autoReload: options.devServer ? false : options.autoReload,
       vendorVersion: options.vendorVersion,
       config: options.config
     })
@@ -36,7 +39,28 @@ program
       })
     }
 
-    compiler.watch({}, logCompileOutput.bind(null, options))
+    if (options.devServer) {
+      const devServerPort = process.env.DEV_SERVER_PORT || 9000
+      const server = new WebpackDevServer(compiler, {
+        contentBase: path.join(
+          process.cwd(),
+          options.target.split("[vendor]").join(vendor)
+        ),
+        compress: true,
+        port: devServerPort,
+        stats: {
+          colors: true
+        },
+        historyApiFallback: {
+          index: "index.html"
+        }
+      })
+      server.listen(devServerPort, "127.0.0.1", () => {
+        console.log(`Starting dev server on http://localhost:${devServerPort}`)
+      })
+    } else {
+      compiler.watch({}, logCompileOutput.bind(null, options))
+    }
   })
 
 program

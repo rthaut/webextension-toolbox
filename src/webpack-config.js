@@ -20,6 +20,7 @@ module.exports = function webpackConfig ({
   devtool = false,
   minimize = false,
   vendor = 'chrome',
+  autoReload = false,
   vendorVersion
 } = {}) {
   const mode = dev ? 'development' : 'production'
